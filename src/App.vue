@@ -1,80 +1,89 @@
 <template>
-  <main id="todolist">
+    <main id="todolist">
       <h1>Todo List <span>Get things done, one item at a time.</span></h1>
       <div class="items" v-if="items.length">
-          <ul>
-              <li v-for="(item, index) in items" :key="index" :class="{'done' : item.done}">
-                  <span class="label">{{item.title}}</span>
-                  <div class="actions">
-                      <button class="btn-picto" type="button" @click="changeItemStatus(index)">
-                          <i aria-hidden="true" class="material-icons">{{item.done ? 'check_box' :
-                              'check_box_outline_blank'}}</i>
-                      </button>
-                      <button class="btn-picto" type="button"
-                              aria-label="Delete" title="Delete" @click="deleteItem(index)">
-                          <i aria-hidden="true" class="material-icons">delete</i>
-                      </button>
-                  </div>
-              </li>
-          </ul>
+        <ul>
+          <li v-for="(item, index) in items" :key="index" :class="{'done': item.done}">
+            <span v-if="!item.editing" class="label">{{item.title}}</span>
+            <input v-else type="text" v-model="item.tempItem" @keyup.enter="saveItem(index)">
+            <div class="actions">
+              <button class="btn-picto" type="button" @click="changeItemStatus(index)">
+                <i aria-hidden="true" class="material-icons">{{item.done ? 'check_box' : 'check_box_outline_blank'}}</i>
+              </button>
+              <button class="btn-picto" type="button" aria-label="Edit" title="Edit" @click="editItem(index)">
+                <i aria-hidden="true" class="material-icons">{{item.editing ? 'done' : 'edit'}}</i>
+              </button>
+              <button class="btn-picto" type="button" aria-label="Delete" title="Delete" @click="deleteItem(index)">
+                <i aria-hidden="true" class="material-icons">delete</i>
+              </button>
+            </div>
+          </li>
+        </ul>
       </div>
-
+  
       <p class="emptylist" v-else>Your todo list is empty.</p>
-
+  
       <form @submit.prevent="addItem">
-          <label for="newitem">Add to the todo list</label>
-          <input type="text" name="newitem" id="newitem" v-model="itemTitle">
-          <button type="submit">Add item</button>
+        <label for="newitem">Add to the todo list</label>
+        <input type="text" name="newitem" id="newitem" v-model="itemTitle">
+        <button type="submit">Add item</button>
       </form>
-  </main>
-</template>
-
-<script>
-  const localKey = 'todos';
+    </main>
+  </template>
+  
+  <script>
   export default {
-      data() {
-          return {
-              itemTitle: '',
-              items: [],
-          }
+    data() {
+      return {
+        itemTitle: '',
+        items: [],
+      };
+    },
+    methods: {
+      addItem() {
+        if (!this.itemTitle.trim()) {
+          return;
+        }
+  
+        this.items.push({
+          title: this.itemTitle.trim(),
+          done: false,
+          editing: false,
+          tempItem: '',
+        });
+  
+        this.itemTitle = '';
       },
-      methods: {
-          addItem() {
-              if (!this.itemTitle) {
-                  return;
-              }
-
-              this.items.push({
-                  title: this.itemTitle,
-                  done: false,
-              });
-
-              this.itemTitle = '';
-          },
-          deleteItem(index) {
-              this.items.splice(index, 1);
-          },
-          changeItemStatus(index) {
-              const item = this.items[index];
-              this.items[index].done = !item.done;
-          }
+      deleteItem(index) {
+        this.items.splice(index, 1);
       },
-      mounted() {
-          const items = localStorage.getItem(localKey) || '[]';
-          this.items = JSON.parse(items);
+      changeItemStatus(index) {
+        const item = this.items[index];
+        this.items[index].done = !item.done;
       },
-      watch: {
-          items: {
-              deep: true,
-              handler(items) {
-                  localStorage.setItem(localKey, JSON.stringify(items))
-
-              }
-          }
-      }
-  }
-</script>
-
+      editItem(index) {
+        this.items[index].editing = true;
+        this.items[index].tempItem = this.items[index].title;
+      },
+      saveItem(index) {
+        this.items[index].title = this.items[index].tempItem.trim();
+        this.items[index].editing = false;
+      },
+    },
+    mounted() {
+      const items = localStorage.getItem('todos') || '[]';
+      this.items = JSON.parse(items);
+    },
+    watch: {
+      items: {
+        deep: true,
+        handler(items) {
+          localStorage.setItem('todos', JSON.stringify(items));
+        },
+      },
+    },
+  };
+  </script>
 <style>
   * {
       margin: 0;
