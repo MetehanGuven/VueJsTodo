@@ -3,11 +3,11 @@
         <h1>Hello User {{ getUserId() }}</h1>
         <main id="todolist">
             <h1>Todo List <span>Get things done, one item at a time.</span></h1>
-            <div class="items" v-if="items.length">
+            <div class="items" v-if="items.length > 0">
                 <ul>
-                    <li v-for="(item, index) in items" :key="index" :class="{ 'done': item.done }">
+                    <li v-for="(item, index) in todolist" :key="item.id" :class="{ 'done': item.done }">
                         <span v-if="!item.editing" class="label">{{ item.title }}</span>
-                        <input v-else type="text" v-model="item.tempItem" @keyup.enter="saveItem(index)">
+                        <input v-else type="text" v-model="item.tempItem" @keyup.enter="saveItem(index, item)">
                         <div class="actions">
                             <button class="btn-picto" type="button" @click="changeItemStatus(index)">
                                 <i aria-hidden="true" class="material-icons">{{ item.done ? 'check_box' :
@@ -17,7 +17,7 @@
                                 <i aria-hidden="true" class="material-icons">{{ item.editing ? 'done' : 'edit' }}</i>
                             </button>
                             <button class="btn-picto" type="button" aria-label="Delete" title="Delete"
-                                @click="deleteItem(index)">
+                                @click="deleteItem(index, item.id)">
                                 <i aria-hidden="true" class="material-icons">delete</i>
                             </button>
                         </div>
@@ -40,6 +40,7 @@
 <script>
 import axios from 'axios';
 
+
 export default {
     name: 'Home',
     data() {
@@ -51,7 +52,6 @@ export default {
     methods: {
         logout() {
             localStorage.removeItem('user-info');
-            localStorage.removeItem('todos');
             this.$router.push({ name: 'Login' });
         },
         getUserId() {
@@ -62,39 +62,61 @@ export default {
                 return '';
             }
         },
-        addItem() {
+        async addItem() {
             if (!this.itemTitle.trim()) {
                 return;
             }
 
-            this.items.push({
-                title: this.itemTitle.trim(),
-                done: false,
-                editing: false,
-                tempItem: ''
-            });
+            const user = JSON.parse(localStorage.getItem('user-info'));
+            if (!user) {
+                return
+            }
+            const payload = {
+                userId: user.id,
+                title: this.itemTitle,
+                done: false
+            }
+            const { data } = await axios.post("http://localhost:3000/todos", payload)
+            this.items.push(data)
 
             this.itemTitle = '';
         },
-        deleteItem(index) {
+        async deleteItem(index, todoId) {
             this.items.splice(index, 1);
+            await axios.delete(`http://localhost:3000/todos/${todoId}`)
         },
         changeItemStatus(index) {
             const item = this.items[index];
             this.items[index].done = !item.done;
         },
-        editItem(index) {
-            this.items[index].editing = true;
-            this.items[index].tempItem = this.items[index].title;
+        async saveItem(index, todo) {
+            this.todolist[index].editing = true;
+            this.todolist[index].title = todo.tempItem;
+            const payload = {
+                ...todo,
+                title: todo.tempItem
+            }
+            delete payload.editing
+            delete payload.tempItem
+            await axios.put(`http://localhost:3000/todos/${todo.id}`, payload)
         },
-        saveItem(index) {
-            this.items[index].title = this.items[index].tempItem.trim();
-            this.items[index].editing = false;
+        editItem(index) {
+            this.todolist[index].editing = true;
+            this.todolist[index].tempItem = this.items[index].title.trim();
+        },
+        async loadTodoItems(userId) {
+            let { data } = await axios.get(`http://localhost:3000/Todos?userId=${userId}`);
+            this.items = data
+        }
+    },
+    computed: {
+        todolist() {
+            return this.items
         }
     },
     mounted() {
-        const items = localStorage.getItem('todos') || '[]';
-        this.items = JSON.parse(items);
+        const user = JSON.parse(localStorage.getItem('user-info'));
+        this.loadTodoItems(user.id)
     },
     watch: {
         items: {

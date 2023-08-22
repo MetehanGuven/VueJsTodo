@@ -29,17 +29,12 @@ export default {
             if (result.data.length > 0) {
                 let user = result.data[0]
                 localStorage.setItem('user-info', JSON.stringify(user));
-                this.loadTodoItems(user.id);
                 this.$router.push({ name: 'Home' })
             }
             else {
                 this.error = "Hatali Giris"
             }
         },
-        async loadTodoItems(userId) {
-            let result = await axios.get(`http://localhost:3000/Todos?userId=${userId}`);
-            this.$store.commit('setTodoItems', result.data);
-        }
     },
     mounted() {
         let user = localStorage.getItem('user-info');
